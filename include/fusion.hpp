@@ -1,57 +1,34 @@
 #pragma once
 
-#include "api.h"
 #include "pros/apix.h"
+#include "lemlib/chassis/chassis.hpp"
+#include "mcl.hpp" // or wherever your MCL is
 #include "pros/rtos.hpp"
-
-// Forward-declare your MCL class and LemLib's chassis:
-#include "mcl.hpp"                 // or wherever your MCL is declared
-#include "lemlib/api.hpp"
-
-// Forward-declare distance sensors (extern) if they're in another file:
-extern pros::Distance distFront;
-extern pros::Distance distRight;
-extern pros::Distance distBack;
-extern pros::Distance distLeft;
-
-/**
- * A class that fuses LemLib's odometry with MCL's updates.
- *
- * Workflow:
- *  1) We read the incremental change in LemLib's pose (inches, degrees).
- *  2) Convert to cm, radians -> feed into mcl->predict(...).
- *  3) Read 4 distance sensors -> mcl->updateWeights(...), resample().
- *  4) Get MCL's best or mean particle -> convert back to inches/degrees.
- *  5) "Snap" LemLib's pose to that fused pose -> chassis.setPose(...).
- *
- * This happens in a background task (50ms loop by default).
- */
+#include "sensors.hpp"
 class Fusion {
 public:
-  /**
-   * Constructor
-   * @param chassis - reference to your LemLib chassis
-   * @param mclObj  - pointer to your MCL instance
-   */
-   Fusion(lemlib::Chassis& chassis, MCL* mclObj, double blendFactor = 0.2);
+  // Constructor
+  Fusion(lemlib::Chassis& chassis, MCL* mclObj, double blendFactor = 0.2);
 
-  /**
-   * Starts the background task that continuously fuses MCL + LemLib odometry.
-   */
+  // This is the function we call in initialize() to start the background task
   void startFusionTask(int loopDelayMs = 50);
 
 private:
-  // The actual task function that runs in a loop
+  // The static "thunk" that tasks call
   static void fusionTaskThunk(void* param);
+
+  // The main loop that does MCL + LemLib fusion
   void fusionTask(int loopDelayMs);
 
-  // References to your chassis and MCL
+  // References
   lemlib::Chassis& chassis_;
   MCL* mcl_;
 
-  // We keep track of the previous chassis pose
-  double oldX_in_;       // inches
-  double oldY_in_;       // inches
-  double oldTheta_deg_;  // degrees
+  // Used for incremental odometry
+  double oldX_in_;
+  double oldY_in_;
+  double oldTheta_deg_;
+
+  // Blend factor for partial corrections
   double blendFactor_;
 };
