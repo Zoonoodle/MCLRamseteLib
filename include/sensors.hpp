@@ -6,8 +6,8 @@
  * Extern declarations for sensor objects.
  * We'll define them in sensors.cpp
  */
-extern pros::Imu imu1;
-extern pros::Imu imu2;
+extern pros::Imu imu;
+extern pros::Imu mclImu;
 
 extern pros::Distance distFront;
 extern pros::Distance distRight;

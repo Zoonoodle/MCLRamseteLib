@@ -5,7 +5,7 @@
 struct Particle {
   double x;
   double y;
-  double theta;   // orientation, in radians
+  double theta;   
   double weight;  // importance weight
 
   Particle()

@@ -1,78 +1,83 @@
 #pragma once
 
 #include <vector>
+#include <random>      // for std::default_random_engine, distributions
+#include "pros/imu.hpp"
+#include <cmath>
+#include <algorithm>
+#include <numeric>
 #include <random>
-#include "particle.hpp"
+#include "particle.hpp "
+
+
+
 
 /**
- * Monte Carlo Localization (MCL) class.
- * 
- * Uses a set of particles to estimate (x, y, theta).
- * Sensor model uses four distance sensors to measure distance 
- * to each wall of a 2D field.
+ * MCL (Monte Carlo Localization) class :O
  */
 class MCL {
 public:
   /**
    * Constructor
-   * @param numParticles  number of particles in the filter
-   * @param x_init        initial x guess
-   * @param y_init        initial y guess
-   * @param theta_init    initial orientation (radians)
-   * @param fieldWidth    width of the field in cm
-   * @param fieldHeight   height of the field in cm
+   * @param numParticles  Number of particles in the filter
+   * @param x_init        Initial x guess (in cm)
+   * @param y_init        Initial y guess (in cm)
+   * @param theta_init    Initial orientation (radians)
+   * @param fieldWidth    Field width (cm)
+   * @param fieldHeight   Field height (cm)
+   * @param dedicatedImuPtr (optional) pointer to a dedicated pros::Imu for MCL
    */
-  MCL(int numParticles, double x_init, double y_init, double theta_init,
-      double fieldWidth = 365.76, double fieldHeight = 365.76);
+  MCL(int numParticles,
+      double x_init, double y_init, double theta_init,
+      double fieldWidth, double fieldHeight,
+      pros::Imu* dedicatedImuPtr = nullptr);
 
-  /**
-   * Predict step (motion model).
-   * @param deltaTrans  forward distance traveled (cm)
-   * @param deltaRot    change in orientation (radians)
-   */
+  // Predict robot motion given deltaTrans (cm) and deltaRot (rad)
   void predict(double deltaTrans, double deltaRot);
 
-  /**
-   * Update step (sensor model) using four distance sensor readings
-   * in cm. (front, right, back, left).
-   */
-  void updateWeights(double frontDist, double rightDist, 
+  // Overloaded predict: if you want MCL to read the IMU for orientation
+  void predictFromIMU(double deltaTrans);
+
+  // Update sensor weights with 4 distance readings (cm)
+  void updateWeights(double frontDist, double rightDist,
                      double backDist, double leftDist);
 
-  /**
-   * Resample step. 
-   * Uses a simple roulette wheel (or low-variance) sampling to 
-   * discard improbable particles and replicate probable ones.
-   */
+  // Resample particles
   void resample();
 
-  /** 
-   * Returns the particle with the highest weight.
-   */
+  // Get best or mean particle
   Particle getBestParticle() const;
-
-  /** 
-   * Returns a weighted mean of all particles (x, y, orientation). 
-   */
   Particle getMeanParticle() const;
 
 private:
-  int numParticles_;
-  std::vector<Particle> particles_;
-  std::default_random_engine generator_;
-
-  // Noise parameters for motion model & sensor
-  double transNoiseStd_;   // e.g. ~1 cm
-  double rotNoiseStd_;     // e.g. ~0.05 rad (~3 deg)
-  double sensorNoiseStd_;  // e.g. ~3 cm
-
-  // Field dimensions in cm
-  double fieldWidth_;
-  double fieldHeight_;
-
-  // Private helpers for expected distances from each side
+  // Expected distance to walls from a given particle
   double expectedFrontDistance(const Particle &p) const;
   double expectedRightDistance(const Particle &p) const;
   double expectedBackDistance(const Particle &p) const;
   double expectedLeftDistance(const Particle &p) const;
+
+private:
+  int numParticles_;
+
+  // Particle set
+  std::vector<Particle> particles_;
+
+  // RNG for adding motion & sensor noise
+  std::default_random_engine generator_;
+
+  // Noise parameters
+  double transNoiseStd_;   // for translation
+  double rotNoiseStd_;     // for rotation
+  double sensorNoiseStd_;  // for distance sensors
+
+  // Field dimensions
+  double fieldWidth_;
+  double fieldHeight_;
+
+  // Optional dedicated IMU for MCL
+  pros::Imu* dedicatedIMU_;
+
+  // Track last IMU heading (radians) if using predictFromIMU
+  double lastIMUHeadingRad_ = 0.0;
 };
+
