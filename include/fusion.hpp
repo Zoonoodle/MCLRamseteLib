@@ -33,7 +33,7 @@ public:
    * @param chassis - reference to your LemLib chassis
    * @param mclObj  - pointer to your MCL instance
    */
-  Fusion(lemlib::Chassis& chassis, MCL* mclObj);
+   Fusion(lemlib::Chassis& chassis, MCL* mclObj, double blendFactor = 0.2);
 
   /**
    * Starts the background task that continuously fuses MCL + LemLib odometry.
@@ -53,4 +53,5 @@ private:
   double oldX_in_;       // inches
   double oldY_in_;       // inches
   double oldTheta_deg_;  // degrees
+  double blendFactor_;
 };
